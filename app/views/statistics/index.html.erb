@@ -1,0 +1,188 @@
+<div>
+  <!-- ヘッダー -->
+  <div class="card mb-lg">
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">
+        <i class="fas fa-chart-line"></i> 統計情報
+      </h2>
+      
+      <!-- 期間選択 -->
+      <div class="flex gap-sm">
+        <%= link_to statistics_path(period: 'day'), class: "btn #{params[:period] == 'day' || params[:period].nil? ? 'btn-primary' : 'btn-secondary'}" do %>
+          <i class="fas fa-calendar-day"></i> 日
+        <% end %>
+        <%= link_to statistics_path(period: 'week'), class: "btn #{params[:period] == 'week' ? 'btn-primary' : 'btn-secondary'}" do %>
+          <i class="fas fa-calendar-week"></i> 週
+        <% end %>
+        <%= link_to statistics_path(period: 'month'), class: "btn #{params[:period] == 'month' ? 'btn-primary' : 'btn-secondary'}" do %>
+          <i class="fas fa-calendar-alt"></i> 月
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- グラフセクション -->
+  <div class="grid grid-2 gap-lg mb-lg">
+    <!-- 円グラフ: 作業ごとの時間割合 -->
+    <div class="card">
+      <h3 class="text-xl font-bold mb-lg">
+        <i class="fas fa-pie-chart"></i> 作業ごとの時間割合
+      </h3>
+      <canvas id="taskPieChart" data-controller="chart" data-chart-type-value="pie"></canvas>
+    </div>
+
+    <!-- 棒グラフ: カテゴリ別作業時間 -->
+    <div class="card">
+      <h3 class="text-xl font-bold mb-lg">
+        <i class="fas fa-bar-chart"></i> カテゴリ別作業時間
+      </h3>
+      <canvas id="categoryBarChart" data-controller="chart" data-chart-type-value="bar"></canvas>
+    </div>
+  </div>
+
+  <!-- 作業履歴一覧 -->
+  <div class="card">
+    <h3 class="text-xl font-bold mb-lg">
+      <i class="fas fa-list"></i> 作業履歴
+    </h3>
+
+    <% if @tasks.any? %>
+      <div class="flex flex-col gap-md">
+        <% @tasks.each do |task| %>
+          <div class="card" style="padding: 1rem; border-left: 4px solid <%= task.category&.color || '#8B5CF6' %>;">
+            <div class="flex justify-between items-center">
+              <div style="flex: 1;">
+                <h4 class="font-semibold"><%= task.name %></h4>
+                <p class="text-sm text-muted">
+                  <i class="fas fa-tag"></i> <%= task.category&.name || '未分類' %>
+                  <span style="margin-left: 1rem;">
+                    <i class="fas fa-clock"></i> <%= (task.duration / 60.0).round(1) %>分
+                  </span>
+                  <% if task.pomodoro_sets && task.pomodoro_sets > 0 %>
+                    <span style="margin-left: 1rem;">
+                      <i class="fas fa-tomato"></i> <%= task.pomodoro_sets %>セット
+                    </span>
+                  <% end %>
+                </p>
+                <p class="text-sm text-muted">
+                  <i class="fas fa-calendar"></i> <%= task.start_time.strftime('%Y/%m/%d %H:%M') %>
+                  <% if task.end_time %>
+                    - <%= task.end_time.strftime('%H:%M') %>
+                  <% end %>
+                </p>
+              </div>
+              <div class="flex gap-sm">
+                <button class="btn-icon btn-danger" onclick="deleteTask(<%= task.id %>)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="text-center text-muted p-xl">
+        <i class="fas fa-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p class="mt-md">この期間の作業データがありません</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  // グラフデータを取得して描画
+  document.addEventListener('DOMContentLoaded', async () => {
+    const period = '<%= params[:period] || 'day' %>';
+    
+    try {
+      const response = await fetch(`/statistics/data?period=${period}`);
+      const data = await response.json();
+      
+      // 円グラフ: 作業ごとの時間割合
+      const taskCtx = document.getElementById('taskPieChart').getContext('2d');
+      new Chart(taskCtx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(data.task_data),
+          datasets: [{
+            data: Object.values(data.task_data).map(v => (v / 60).toFixed(1)),
+            backgroundColor: [
+              '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+              '#06B6D4', '#EC4899', '#14B8A6', '#F97316', '#6366F1'
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#F9FAFB' }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.label}: ${context.parsed}分`
+              }
+            }
+          }
+        }
+      });
+      
+      // 棒グラフ: カテゴリ別作業時間
+      const categoryCtx = document.getElementById('categoryBarChart').getContext('2d');
+      new Chart(categoryCtx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(data.category_data),
+          datasets: [{
+            label: '作業時間（分）',
+            data: Object.values(data.category_data).map(v => (v / 60).toFixed(1)),
+            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+            borderColor: '#3B82F6',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              labels: { color: '#F9FAFB' }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#F9FAFB' },
+              grid: { color: 'rgba(255, 255, 255, 0.1)' }
+            },
+            x: {
+              ticks: { color: '#F9FAFB' },
+              grid: { color: 'rgba(255, 255, 255, 0.1)' }
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('グラフデータ取得エラー:', error);
+    }
+  });
+  
+  async function deleteTask(taskId) {
+    if (!confirm('この作業を削除しますか？')) return;
+    
+    try {
+      const response = await fetch(`/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+        }
+      });
+      
+      if (response.ok) {
+        location.reload();
+      }
+    } catch (error) {
+      console.error('削除エラー:', error);
+    }
+  }
+</script>

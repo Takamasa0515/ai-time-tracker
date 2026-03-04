@@ -1,0 +1,136 @@
+<div class="grid grid-2 gap-lg">
+  <!-- 左側: タイマーセクション -->
+  <div>
+    <!-- 日付と今日の作業時間 -->
+    <div class="card mb-lg">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold"><%= Date.today.strftime('%Y年%m月%d日') %></h2>
+          <p class="text-muted text-sm"><%= %w[日 月 火 水 木 金 土][Date.today.wday] %>曜日</p>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold" style="background: var(--gradient-info); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            <%= (@today_total_duration / 60.0).round(1) %>分
+          </div>
+          <p class="text-muted text-sm">今日の作業時間</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- タイマー -->
+    <div class="card text-center" data-controller="timer" data-timer-work-duration-value="<%= @timer_setting.work_duration %>" data-timer-break-duration-value="<%= @timer_setting.break_duration %>">
+      <!-- モード選択 -->
+      <div class="flex gap-md justify-center mb-lg">
+        <button class="btn btn-secondary" data-action="click->timer#switchToCountUp">
+          <i class="fas fa-stopwatch"></i> カウントアップ
+        </button>
+        <button class="btn btn-primary" data-action="click->timer#switchToPomodoro">
+          <i class="fas fa-clock"></i> ポモドーロ
+        </button>
+      </div>
+
+      <!-- 円形タイマー -->
+      <div class="timer-circle mb-lg">
+        <svg width="300" height="300">
+          <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <circle class="timer-circle-bg" cx="150" cy="150" r="140"></circle>
+          <circle class="timer-circle-progress" cx="150" cy="150" r="140" 
+                  data-timer-target="progressCircle"
+                  style="stroke-dasharray: 879.6; stroke-dashoffset: 0;"></circle>
+        </svg>
+        
+        <div class="timer-display">
+          <div class="timer-time" data-timer-target="display">00:00</div>
+          <div class="timer-label" data-timer-target="label">準備完了</div>
+        </div>
+      </div>
+
+      <!-- タイマーコントロール -->
+      <div class="flex gap-md justify-center mb-lg">
+        <button class="btn btn-success" data-action="click->timer#start" data-timer-target="startBtn">
+          <i class="fas fa-play"></i> 開始
+        </button>
+        <button class="btn btn-secondary" data-action="click->timer#pause" data-timer-target="pauseBtn" style="display: none;">
+          <i class="fas fa-pause"></i> 一時停止
+        </button>
+        <button class="btn btn-danger" data-action="click->timer#reset">
+          <i class="fas fa-redo"></i> リセット
+        </button>
+      </div>
+
+      <!-- 作業名入力 -->
+      <div class="mb-md">
+        <input type="text" class="input" placeholder="作業名を入力..." data-timer-target="taskName">
+      </div>
+
+      <!-- カテゴリ選択 -->
+      <div class="flex gap-sm justify-center flex-wrap">
+        <% @categories.each do |category| %>
+          <button class="btn btn-secondary" 
+                  data-action="click->timer#selectCategory" 
+                  data-category-id="<%= category.id %>"
+                  data-category-color="<%= category.color %>"
+                  style="border-color: <%= category.color %>;">
+            <%= category.name %>
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右側: 今日の作業履歴 -->
+  <div>
+    <div class="card">
+      <h3 class="text-xl font-bold mb-lg">
+        <i class="fas fa-history"></i> 今日の作業履歴
+      </h3>
+
+      <div class="flex flex-col gap-md" data-timer-target="taskList">
+        <% if @today_tasks.any? %>
+          <% @today_tasks.each do |task| %>
+            <div class="card" style="padding: 1rem; border-left: 4px solid <%= task.category&.color || '#8B5CF6' %>;">
+              <div class="flex justify-between items-center">
+                <div style="flex: 1;">
+                  <h4 class="font-semibold"><%= task.name %></h4>
+                  <p class="text-sm text-muted">
+                    <i class="fas fa-tag"></i> <%= task.category&.name || '未分類' %>
+                    <span style="margin-left: 1rem;">
+                      <i class="fas fa-clock"></i> <%= (task.duration / 60.0).round(1) %>分
+                    </span>
+                    <% if task.pomodoro_sets && task.pomodoro_sets > 0 %>
+                      <span style="margin-left: 1rem;">
+                        <i class="fas fa-tomato"></i> <%= task.pomodoro_sets %>セット
+                      </span>
+                    <% end %>
+                  </p>
+                  <p class="text-sm text-muted">
+                    <%= task.start_time.strftime('%H:%M') %> - <%= task.end_time&.strftime('%H:%M') || '進行中' %>
+                  </p>
+                </div>
+                <div class="flex gap-sm">
+                  <button class="btn-icon btn-secondary" data-action="click->timer#duplicateTask" data-task-id="<%= task.id %>">
+                    <i class="fas fa-copy"></i>
+                  </button>
+                  <button class="btn-icon btn-danger" data-action="click->timer#deleteTask" data-task-id="<%= task.id %>">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="text-center text-muted p-xl">
+            <i class="fas fa-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-md">まだ作業がありません</p>
+            <p class="text-sm">タイマーを開始して作業を記録しましょう！</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

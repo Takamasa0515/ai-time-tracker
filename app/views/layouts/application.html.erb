@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Time Tracker - ポモドーロタイマー</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="utf-8">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  </head>
+
+  <body>
+    <!-- ナビゲーション -->
+    <nav class="nav">
+      <div style="flex: 1; display: flex; align-items: center; gap: 1rem;">
+        <h1 style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 700; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          <i class="fas fa-brain"></i> Time Tracker
+        </h1>
+      </div>
+      
+      <div style="display: flex; gap: 0.5rem;">
+        <%= link_to root_path, class: "nav-link #{current_page?(root_path) ? 'active' : ''}" do %>
+          <i class="fas fa-home"></i> ダッシュボード
+        <% end %>
+        
+        <%= link_to statistics_path, class: "nav-link #{current_page?(statistics_path) ? 'active' : ''}" do %>
+          <i class="fas fa-chart-pie"></i> 統計情報
+        <% end %>
+        
+        <%= link_to settings_path, class: "nav-link #{current_page?(settings_path) ? 'active' : ''}" do %>
+          <i class="fas fa-cog"></i> 設定
+        <% end %>
+      </div>
+    </nav>
+
+    <!-- メインコンテンツ -->
+    <main style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+      <% if notice %>
+        <div class="card" style="background: var(--gradient-success); margin-bottom: 1rem; padding: 1rem;">
+          <%= notice %>
+        </div>
+      <% end %>
+      
+      <% if alert %>
+        <div class="card" style="background: var(--gradient-danger); margin-bottom: 1rem; padding: 1rem;">
+          <%= alert %>
+        </div>
+      <% end %>
+      
+      <%= yield %>
+    </main>
+  </body>
+</html>

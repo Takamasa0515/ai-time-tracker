@@ -1,0 +1,155 @@
+<div class="grid grid-2 gap-lg">
+  <!-- タイマー設定 -->
+  <div class="card">
+    <h2 class="text-2xl font-bold mb-lg">
+      <i class="fas fa-clock"></i> ポモドーロタイマー設定
+    </h2>
+
+    <%= form_with model: @timer_setting, url: settings_path, method: :patch, local: true do |f| %>
+      <div class="flex flex-col gap-md">
+        <div>
+          <label class="text-sm font-semibold text-muted">作業時間（分）</label>
+          <%= f.number_field :work_duration, class: 'input mt-sm', min: 1, max: 120 %>
+        </div>
+
+        <div>
+          <label class="text-sm font-semibold text-muted">休憩時間（分）</label>
+          <%= f.number_field :break_duration, class: 'input mt-sm', min: 1, max: 60 %>
+        </div>
+
+        <div>
+          <label class="text-sm font-semibold text-muted">長休憩時間（分）</label>
+          <%= f.number_field :long_break_duration, class: 'input mt-sm', min: 1, max: 60 %>
+        </div>
+
+        <div>
+          <label class="text-sm font-semibold text-muted">セット数</label>
+          <%= f.number_field :sets, class: 'input mt-sm', min: 1, max: 10 %>
+        </div>
+
+        <div style="border-top: 1px solid var(--color-border); padding-top: 1rem; margin-top: 1rem;">
+          <h3 class="text-lg font-bold mb-md">通知設定</h3>
+          
+          <div class="flex items-center gap-md mb-md">
+            <%= f.check_box :notification_enabled, class: 'input', style: 'width: auto;' %>
+            <label class="text-sm">ブラウザ通知を有効にする</label>
+          </div>
+
+          <div class="flex items-center gap-md mb-md">
+            <%= f.check_box :sound_enabled, class: 'input', style: 'width: auto;' %>
+            <label class="text-sm">音アラートを有効にする</label>
+          </div>
+
+          <div class="flex items-center gap-md">
+            <%= f.check_box :auto_start_next, class: 'input', style: 'width: auto;' %>
+            <label class="text-sm">次のポモドーロを自動開始</label>
+          </div>
+        </div>
+
+        <div class="mt-md">
+          <%= f.submit '設定を保存', class: 'btn btn-primary' %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- カテゴリ管理 -->
+  <div class="card">
+    <h2 class="text-2xl font-bold mb-lg">
+      <i class="fas fa-tags"></i> カテゴリ管理
+    </h2>
+
+    <!-- 新規カテゴリ追加 -->
+    <div class="mb-lg" style="padding: 1rem; background: var(--color-bg-tertiary); border-radius: var(--radius-md);">
+      <h3 class="text-lg font-semibold mb-md">新しいカテゴリを追加</h3>
+      <div class="flex gap-md">
+        <input type="text" id="newCategoryName" class="input" placeholder="カテゴリ名" style="flex: 1;">
+        <input type="color" id="newCategoryColor" class="input" value="#3B82F6" style="width: 80px;">
+        <button class="btn btn-primary" onclick="addCategory()">
+          <i class="fas fa-plus"></i> 追加
+        </button>
+      </div>
+    </div>
+
+    <!-- カテゴリ一覧 -->
+    <div class="flex flex-col gap-md" id="categoryList">
+      <% @categories.each do |category| %>
+        <div class="card" style="padding: 1rem; border-left: 4px solid <%= category.color %>;">
+          <div class="flex justify-between items-center">
+            <div style="flex: 1;">
+              <h4 class="font-semibold"><%= category.name %></h4>
+              <p class="text-sm text-muted">
+                <i class="fas fa-palette"></i> <%= category.color %>
+              </p>
+            </div>
+            <div class="flex gap-sm">
+              <button class="btn-icon btn-danger" onclick="deleteCategory(<%= category.id %>)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function addCategory() {
+    const name = document.getElementById('newCategoryName').value.trim();
+    const color = document.getElementById('newCategoryColor').value;
+    
+    if (!name) {
+      alert('カテゴリ名を入力してください');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+          category: { name, color }
+        })
+      });
+      
+      if (response.ok) {
+        location.reload();
+      } else {
+        const data = await response.json();
+        alert('エラー: ' + (data.errors || '不明なエラー'));
+      }
+    } catch (error) {
+      console.error('カテゴリ追加エラー:', error);
+      alert('カテゴリの追加に失敗しました');
+    }
+  }
+  
+  async function deleteCategory(categoryId) {
+    if (!confirm('このカテゴリを削除しますか？\n関連する作業は「未分類」になります。')) return;
+    
+    try {
+      const response = await fetch(`/categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+        }
+      });
+      
+      if (response.ok) {
+        location.reload();
+      }
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('カテゴリの削除に失敗しました');
+    }
+  }
+  
+  // 通知権限をリクエスト
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+</script>
