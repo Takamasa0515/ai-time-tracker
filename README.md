@@ -1,24 +1,21 @@
-# README
+# ai-time-tracker
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Antigravityを使用し、バイブコーディングで開発した作業時間計測アプリの検証用プロジェクトです。
 
-Things you may want to cover:
+## 目的
 
-* Ruby version
+Antigravityを用いたAI支援開発フローの検証を目的として作成しました。  
+小規模なアプリケーションを題材に、バイブコーディングの効率や実用性を確認しています。
 
-* System dependencies
+## 作成手順
 
-* Configuration
+1. ChatGPTで以下の仕様書を作成
+   - 01_機能一覧.md
+   - 02_画面遷移図.md
+   - 03_DB設計.md
+2. 上記仕様書をもとにAntigravityでアプリを生成
+3. 生成コードのレビューおよび修正指示を行い実装を調整
 
-* Database creation
+## 備考
 
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+本アプリは実験・検証目的であり、本番運用は想定していません。
